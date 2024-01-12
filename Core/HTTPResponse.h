@@ -7,12 +7,14 @@
  * Returns the length of the data in bytes.
  * If you don't know the length in advance, implement the isChunked method and have it return YES.
 **/
+// response 应该知道自己的发送数据是多少.
 - (UInt64)contentLength;
 
 /**
  * The HTTP server supports range requests in order to allow things like
  * file download resumption and optimized streaming on mobile devices.
 **/
+// resposne 发送数据, 应该是分段式的. 
 - (UInt64)offset;
 - (void)setOffset:(UInt64)offset;
 

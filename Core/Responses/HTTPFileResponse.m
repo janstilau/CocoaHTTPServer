@@ -31,10 +31,10 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_WARN; // | HTTP_LOG_FLAG_TRACE;
 		if (filePath == nil)
 		{
 			HTTPLogWarn(@"%@: Init failed - Nil filePath", THIS_FILE);
-			
 			return nil;
 		}
 		
+        // 文件的长度, 是通过 file 的 attribute 读取出来的.
 		NSDictionary *fileAttributes = [[NSFileManager defaultManager] attributesOfItemAtPath:filePath error:nil];
 		if (fileAttributes == nil)
 		{

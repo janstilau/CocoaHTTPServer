@@ -174,6 +174,7 @@ static NSMutableArray *recentNonces;
  * Associates this new HTTP connection with the given AsyncSocket.
  * This HTTP connection object will become the socket's delegate and take over responsibility for the socket.
 **/
+// 真正的数据通道, 还是通过 GCDAsyncSocket.
 - (id)initWithAsyncSocket:(GCDAsyncSocket *)newSocket configuration:(HTTPConfig *)aConfig
 {
 	if ((self = [super init]))
