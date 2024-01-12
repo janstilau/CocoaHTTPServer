@@ -890,6 +890,7 @@ static NSMutableArray *recentNonces;
  * This method is called after a full HTTP request has been received.
  * The current request is in the HTTPMessage request variable.
 **/
+// 到这里, request 就已经完全的读取完毕了, 开始进行响应的处理了.
 - (void)replyToHTTPRequest
 {
 	HTTPLogTrace();
@@ -1121,6 +1122,7 @@ static NSMutableArray *recentNonces;
 	return [@"\r\n0\r\n\r\n" dataUsingEncoding:NSUTF8StringEncoding];
 }
 
+// 在这里, 进行响应的发送处理. 
 - (void)sendResponseHeadersAndBody
 {
 	if ([httpResponse respondsToSelector:@selector(delayResponseHeaders)])
@@ -1800,7 +1802,7 @@ static NSMutableArray *recentNonces;
  * The data parameter is the invalid HTTP header line, including CRLF, as read from GCDAsyncSocket.
  * The data parameter may also be nil if the request as a whole was invalid, such as a POST with no Content-Length.
 **/
-// 每当发生错误的时候, 就使用该方法, 将制造 Resposne 返回给客户端. 
+// 当察觉到, 请求报文里面有错误的时候, 发送 400 给客户端.
 - (void)handleInvalidRequest:(NSData *)data
 {
 	// Override me for custom error handling of invalid HTTP requests
@@ -1954,6 +1956,7 @@ static NSMutableArray *recentNonces;
  * This method is called immediately prior to sending the response headers (for an error).
  * This method adds standard header fields, and then converts the response to an NSData object.
 **/
+// 统一添加一些通用的响应报文的头部给客户端.
 - (NSData *)preprocessErrorResponse:(HTTPMessage *)response
 {
 	HTTPLogTrace();
@@ -2038,6 +2041,7 @@ static NSMutableArray *recentNonces;
 			}
 			else
 			{
+                // 如果还没有读完, 那就是原来的长度已经达到了, 进行下一次的读取任务.
 				[asyncSocket readDataToData:[GCDAsyncSocket CRLFData]
 				                withTimeout:TIMEOUT_READ_SUBSEQUENT_HEADER_LINE
 				                  maxLength:MAX_HEADER_LINE_LENGTH
@@ -2046,6 +2050,7 @@ static NSMutableArray *recentNonces;
 		}
 		else
 		{
+            // 这里就是已经将, HTTP Header 的信息读取完毕了.
 			// We have an entire HTTP request header from the client
 			
 			// Extract the method (such as GET, HEAD, POST, etc)
@@ -2055,6 +2060,8 @@ static NSMutableArray *recentNonces;
 			NSString *uri = [self requestURI];
 			
 			// Check for a Transfer-Encoding field
+            // Transfer-Encoding 是 HTTP 头部中的一个字段，用于指定在传输消息主体时使用的编码方式。这个字段告诉接收方如何解码消息主体，以正确地获取实际的内容。
+            // 会有压缩的方式, 也会有 chunked 这个字段.
 			NSString *transferEncoding = [request headerField:@"Transfer-Encoding"];
       
 			// Check for a Content-Length field
@@ -2068,12 +2075,16 @@ static NSMutableArray *recentNonces;
 			{
 				if (transferEncoding && ![transferEncoding caseInsensitiveCompare:@"Chunked"])
 				{
+                    // 分块编码将消息主体分割成多个块，每个块包含块的大小和块的实际数据。每个块之间使用回车换行符（CRLF）进行分隔。
+                    // [块大小（以十六进制表示）][CRLF][块数据][CRLF]
+                    // 分块编码最后一个块的大小为0，表示消息主体的结束。
 					requestContentLength = -1;
 				}
 				else
 				{
 					if (contentLength == nil)
 					{
+                        // 如果不是 Chunked, 那么必须要有长度. 
 						HTTPLogWarn(@"%@[%p]: Method expects request body, but had no specified Content-Length",
 									THIS_FILE, self);
 						
@@ -2130,6 +2141,7 @@ static NSMutableArray *recentNonces;
 				return;
 			}
 			
+            // 还有 Body 需要请求.
 			if (expectsUpload)
 			{
 				// Reset the total amount of data received for the upload
