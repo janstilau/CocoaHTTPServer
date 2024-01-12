@@ -53,6 +53,23 @@
  * 
  * Important: You should read the discussion at the bottom of this header.
 **/
+/*
+ * 如果您需要计算 HTTP 响应头（状态码或头字段）的任何部分的时间，
+  * 则此方法允许您延迟发送头，以便异步执行计算。
+  * 只需实现此方法并返回 YES，直到您获取有关头的所有所需信息。
+  *
+  * 该方法与 HTTPConnection 的异步响应体系结构相关联。
+  * 您应该在此头文件底部阅读完整的讨论。
+  *
+  * 如果从此方法返回 YES，
+  * HTTPConnection 将等待您调用 responseHasAvailableData 方法。
+  * 之后，HTTPConnection 将再次调用此方法，以查看响应是否准备好发送头。
+  *
+  * 您应该仅在获取有关头的所有所需信息之后延迟发送头。
+  * 异步生成响应体不是延迟发送头的借口。
+  * 相反，您应该与异步响应体系结构相关联，并使用 isChunked 等技术。
+  * 
+ */
 - (BOOL)delayResponseHeaders;
 
 /**

@@ -476,6 +476,8 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 	return result;
 }
 
+// webSockets 的链接, 是需要进行管理的.
+// 这也是, 一台服务器无法支持大量的链接的原因, 每一次链接都消耗了资源. 
 - (void)addWebSocket:(WebSocket *)ws
 {
 	[webSocketsLock lock];

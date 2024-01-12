@@ -13,6 +13,7 @@
 
 @implementation HTTPAuthenticationRequest
 
+// 在初始化方法里面, 会将 Request 里面, header 的部分进行解析, 将需要的各种信息提取出来. 
 - (id)initWithRequest:(HTTPMessage *)request
 {
 	if ((self = [super init]))

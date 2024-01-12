@@ -116,6 +116,7 @@ static NSMutableArray *recentNonces;
  * A nonce is a  server-specified string uniquely generated for each 401 response.
  * The default implementation uses a single nonce for each session.
 **/
+// 一个随机数字.
 + (NSString *)generateNonce
 {
 	// We use the Core Foundation UUID class to generate a nonce value for us
@@ -422,6 +423,7 @@ static NSMutableArray *recentNonces;
 			return NO;
 		}
 		
+        // 使用摘要这种方式, 服务器还是需要拿到客户端的密码才可以真正的进行验证.
 		NSString *password = [self passwordForUser:[auth username]];
 		if (password == nil)
 		{
@@ -486,6 +488,7 @@ static NSMutableArray *recentNonces;
 		
 		NSString *response = [[[responseStr dataUsingEncoding:NSUTF8StringEncoding] md5Digest] hexStringValue];
 		
+        // 服务器收到请求后，根据相同的算法、相同的信息（用户名、密码、realm、nonce、URI 等），验证客户端发送的摘要是否与服务器计算的一致。如果一致，表示认证通过。
 		return [response isEqualToString:[auth response]];
 	}
 	else
@@ -519,6 +522,7 @@ static NSMutableArray *recentNonces;
 		NSString *credUsername = [credentials substringToIndex:colonRange.location];
 		NSString *credPassword = [credentials substringFromIndex:(colonRange.location + colonRange.length)];
 		
+        // 这里就是到服务器内部, 查询 pwd 进行比较了
 		NSString *password = [self passwordForUser:credUsername];
 		if (password == nil)
 		{
@@ -981,6 +985,7 @@ static NSMutableArray *recentNonces;
 	// If not properly authenticated for resource, issue Unauthorized response
 	if ([self isPasswordProtected:uri] && ![self isAuthenticated])
 	{
+        // 发送 401 的响应.
 		[self handleAuthenticationFailed];
 		return;
 	}
@@ -991,6 +996,7 @@ static NSMutableArray *recentNonces;
 	// Note: We already checked to ensure the method was supported in onSocket:didReadData:withTag:
 	
 	// Respond properly to HTTP 'GET' and 'HEAD' commands
+    //
 	httpResponse = [self httpResponseForMethod:method URI:uri];
 	
 	if (httpResponse == nil)
@@ -1122,7 +1128,8 @@ static NSMutableArray *recentNonces;
 	return [@"\r\n0\r\n\r\n" dataUsingEncoding:NSUTF8StringEncoding];
 }
 
-// 在这里, 进行响应的发送处理. 
+// 在这里, 进行响应的发送处理.
+// 这个方法会被多次调用. 因为发送 body 是一个过程, 可能会在发送完毕一段数据之后, 重新调用这里, 继续发送后面的数据.
 - (void)sendResponseHeadersAndBody
 {
 	if ([httpResponse respondsToSelector:@selector(delayResponseHeaders)])
@@ -1133,6 +1140,8 @@ static NSMutableArray *recentNonces;
 		}
 	}
 	
+    // 所有的前面的状态的获取, 其实在后面 body 继续发送的时候, 也是需要的.
+    // Header 只会发送一次, 后面 body 按照 offset 进行发送的时候, 还是需要这些状态进行判断.
 	BOOL isChunked = NO;
 	
 	if ([httpResponse respondsToSelector:@selector(isChunked)])
@@ -1142,15 +1151,14 @@ static NSMutableArray *recentNonces;
 	
 	// If a response is "chunked", this simply means the HTTPResponse object
 	// doesn't know the content-length in advance.
-	
 	UInt64 contentLength = 0;
-	
 	if (!isChunked)
 	{
 		contentLength = [httpResponse contentLength];
 	}
 	
 	// Check for specific range request
+    // 这里有断点续传的设计.
 	NSString *rangeHeader = [request headerField:@"Range"];
 	
 	BOOL isRangeRequest = NO;
@@ -1219,6 +1227,7 @@ static NSMutableArray *recentNonces;
 	{
 		// Write the header response
 		NSData *responseData = [self preprocessResponse:response];
+        // 开始发送响应头的信息.
 		[asyncSocket writeData:responseData withTimeout:TIMEOUT_WRITE_HEAD tag:HTTP_PARTIAL_RESPONSE_HEADER];
 		
 		sentResponseHeaders = YES;
@@ -1227,6 +1236,8 @@ static NSMutableArray *recentNonces;
 		if (!isRangeRequest)
 		{
 			// Regular request
+            // 不断地, 进行 body 的提取. 然后进行发送.
+            // 不同的响应, 如何获取数据, 是不同的 httpResponse 响应类自己完成的.
 			NSData *data = [httpResponse readDataOfLength:READ_CHUNKSIZE];
 			
 			if ([data length] > 0)
@@ -1336,6 +1347,7 @@ static NSMutableArray *recentNonces;
  * 
  * This method should only be called for standard (non-range) responses.
 **/
+// 不断的发送响应的数据.
 - (void)continueSendingStandardResponseBody
 {
 	HTTPLogTrace();
@@ -1558,13 +1570,13 @@ static NSMutableArray *recentNonces;
 /**
  * Converts relative URI path into full file-system path.
 **/
+// 查找, Path 指代的是不是一个文件服务器, 如果是的话, 就返回一个代表着文件的 Response 回去.
 - (NSString *)filePathForURI:(NSString *)path allowDirectory:(BOOL)allowDirectory
 {
 	HTTPLogTrace();
 	
 	// Override me to perform custom path mapping.
 	// For example you may want to use a default file other than index.html, or perhaps support multiple types.
-	
 	NSString *documentRoot = [config documentRoot];
 	
 	// Part 0: Validate document root setting.
@@ -1589,6 +1601,7 @@ static NSMutableArray *recentNonces;
 		return nil;
 	}
 	
+    // 将 Host 的部分去掉了, 相当于文件服务器, 就是根据 ReletivePath 到 RootDir 里面查找资源
 	NSString *relativePath = [[NSURL URLWithString:path relativeToURL:docRoot] relativePath];
 	
 	// Part 2: Append relative path to document root (base path)
@@ -1670,10 +1683,13 @@ static NSMutableArray *recentNonces;
 	
 	// Override me to provide custom responses.
 	
+    // 这里是将服务器, 当做一个资源服务器进行的处理.
+    // 如果, path 是文件资源, 那么发送一个代表文件的响应回去.
 	NSString *filePath = [self filePathForURI:path allowDirectory:NO];
 	
 	BOOL isDir = NO;
 	
+    // 这里就是文件服务器的实现过程了.
 	if (filePath && [[NSFileManager defaultManager] fileExistsAtPath:filePath isDirectory:&isDir] && !isDir)
 	{
 		return [[HTTPFileResponse alloc] initWithFilePath:filePath forConnection:self];
@@ -1856,6 +1872,7 @@ static NSMutableArray *recentNonces;
 /**
  * Called if we're unable to find the requested resource.
 **/
+// 发送文件没有找到的响应回去.
 - (void)handleResourceNotFound
 {
 	// Override me for custom error handling of 404 not found responses

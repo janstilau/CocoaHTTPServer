@@ -71,6 +71,7 @@ static inline NSUInteger WS_PAYLOAD_LENGTH(UInt8 frame)
 	NSData *maskingKey;
 }
 
+// WebSocket 是通过 http 请求开始的, 然后根据里面的字段, 变为一个 WebSocket 的链接. 
 + (BOOL)isWebSocketRequest:(HTTPMessage *)request
 {
 	// Request (Draft 75):
@@ -353,7 +354,16 @@ static inline NSUInteger WS_PAYLOAD_LENGTH(UInt8 frame)
 	// 
 	// ^n:ds[4U
 
-	
+	/*
+     HTTP 状态码是在 HTTP 协议中用于表示服务器对请求的处理结果的一组三位数的数字。以数字 1 开头的 HTTP 状态码主要表示信息性响应，用于指示请求已被接收，继续处理或者需要进一步操作。以下是几个以数字 1 开头的 HTTP 状态码：
+
+     100 Continue（继续）:
+     含义： 服务器已经收到了请求头，并且客户端应该继续发送请求体。
+     示例： 客户端发送带有 Expect: 100-continue 头部的请求，以验证服务器是否愿意接受请求，服务器回复 100 Continue 表示可以继续发送请求体。
+     101 Switching Protocols（切换协议）:
+     含义： 服务器已经理解了客户端的请求，并将通过 Upgrade 头部字段通知客户端切换到另一个协议。
+     示例： 当客户端发送 Upgrade 头部，希望将连接从 HTTP 升级到 WebSocket 或其他协议时，服务器可以回复 101 Switching Protocols。
+     */
 	// Response (Draft 75):
 	// 
 	// HTTP/1.1 101 Web Socket Protocol Handshake
