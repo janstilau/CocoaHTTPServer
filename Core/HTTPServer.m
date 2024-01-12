@@ -41,6 +41,7 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 		// Setup underlying dispatch queues
         // 创建出来的, 都是一个串行的队列.
 		serverQueue = dispatch_queue_create("HTTPServer", NULL);
+        // 这个 connectionQueue, 最终是传递到了每一个 Connetion 对象里面了.
 		connectionQueue = dispatch_queue_create("HTTPConnection", NULL);
 		
 		IsOnServerQueueKey = &IsOnServerQueueKey;
@@ -52,9 +53,11 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 		dispatch_queue_set_specific(connectionQueue, IsOnConnectionQueueKey, nonNullUnusedPointer, NULL);
 		
 		// Initialize underlying GCD based tcp socket
+        // 真正的进行网络请求的, 是这个
 		asyncSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:serverQueue];
 		
 		// Use default connection class of HTTPConnection
+        // 每次新的请求来临之后, 是使用这个类, 做真正的解析工作.
 		connectionClass = [HTTPConnection self];
 		
 		// By default bind on all available interfaces, en1, wifi etc
@@ -82,6 +85,7 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 		connectionsLock = [[NSLock alloc] init];
 		webSocketsLock  = [[NSLock alloc] init];
 		
+        // Server 是通过通知这种方式, 来完成
 		// Register for notifications of closed connections
 		[[NSNotificationCenter defaultCenter] addObserver:self
 		                                         selector:@selector(connectionDidDie:)
@@ -391,10 +395,11 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 	
 }
 
+
+// Server 类里面, 大部分都是和配置相关的东西.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark Server Control
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 - (BOOL)start:(NSError **)errPtr
 {
 	HTTPLogTrace();
@@ -404,6 +409,7 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 	
 	dispatch_sync(serverQueue, ^{ @autoreleasepool {
 		
+        // 这里就是类似于 listen 的地方.
 		success = [asyncSocket acceptOnInterface:interface port:port error:&err];
 		if (success)
 		{
@@ -477,7 +483,7 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 }
 
 // webSockets 的链接, 是需要进行管理的.
-// 这也是, 一台服务器无法支持大量的链接的原因, 每一次链接都消耗了资源. 
+// 这也是, 一台服务器无法支持大量的链接的原因, 每一次链接都消耗了资源.
 - (void)addWebSocket:(WebSocket *)ws
 {
 	[webSocketsLock lock];
@@ -541,8 +547,9 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 }
 
 /*
- 当使用 GCDAsyncSocket 用作服务器的时候, 监听的 Socket 和真正的进行通信的 Socket 并不是一个 Socket.
- 将业务进行切分, 真正的业务处理, 是使用 HTTPConnection 这个类.
+ Server 最主要的能力, 其实是在这里.
+ 其他的代码, 主要是在进行配置.
+ 每次收到新的连接请求之后, 使用这里, 生成 HTTPConnection 对象, 来处理真正的请求动作. 
  */
 - (void)socket:(GCDAsyncSocket *)sock didAcceptNewSocket:(GCDAsyncSocket *)newSocket
 {
