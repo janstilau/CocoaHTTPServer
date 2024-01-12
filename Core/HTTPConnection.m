@@ -638,6 +638,7 @@ static NSMutableArray *recentNonces;
 {
 	HTTPLogTrace();
 	
+    // 设置了一个任务.
 	[asyncSocket readDataToData:[GCDAsyncSocket CRLFData]
 	                withTimeout:TIMEOUT_READ_FIRST_HEADER_LINE
 	                  maxLength:MAX_HEADER_LINE_LENGTH
@@ -1799,6 +1800,7 @@ static NSMutableArray *recentNonces;
  * The data parameter is the invalid HTTP header line, including CRLF, as read from GCDAsyncSocket.
  * The data parameter may also be nil if the request as a whole was invalid, such as a POST with no Content-Length.
 **/
+// 每当发生错误的时候, 就使用该方法, 将制造 Resposne 返回给客户端. 
 - (void)handleInvalidRequest:(NSData *)data
 {
 	// Override me for custom error handling of invalid HTTP requests
@@ -2001,9 +2003,8 @@ static NSMutableArray *recentNonces;
 	return [response messageData];
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark GCDAsyncSocket Delegate
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 /**
  * This method is called after the socket has successfully read data from the stream.
@@ -2011,6 +2012,7 @@ static NSMutableArray *recentNonces;
 **/
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData*)data withTag:(long)tag
 {
+    // 根据 tag, 完成对于请求报文的解析工作.
 	if (tag == HTTP_REQUEST_HEADER)
 	{
 		// Append the header line to the http message

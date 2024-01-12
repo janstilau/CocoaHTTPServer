@@ -976,6 +976,7 @@ typedef enum GCDAsyncSocketError GCDAsyncSocketError;
 
 /**
  * Called when a socket accepts a connection.
+ * spawn 卵生, apawned 孵出词
  * Another socket is automatically spawned to handle it.
  * 
  * You must retain the newSocket if you wish to handle the connection.
@@ -1027,6 +1028,7 @@ typedef enum GCDAsyncSocketError GCDAsyncSocketError;
  * 
  * Note that this method may be called multiple times for a single read if you return positive numbers.
 **/
+// 这里给了一个超时补救的措施.
 - (NSTimeInterval)socket:(GCDAsyncSocket *)sock shouldTimeoutReadWithTag:(long)tag
                                                                  elapsed:(NSTimeInterval)elapsed
                                                                bytesDone:(NSUInteger)length;
@@ -1042,6 +1044,7 @@ typedef enum GCDAsyncSocketError GCDAsyncSocketError;
  * 
  * Note that this method may be called multiple times for a single write if you return positive numbers.
 **/
+// 发送报文的时候, 超时补救的措施. 
 - (NSTimeInterval)socket:(GCDAsyncSocket *)sock shouldTimeoutWriteWithTag:(long)tag
                                                                   elapsed:(NSTimeInterval)elapsed
                                                                 bytesDone:(NSUInteger)length;
@@ -1072,3 +1075,33 @@ typedef enum GCDAsyncSocketError GCDAsyncSocketError;
 - (void)socketDidSecure:(GCDAsyncSocket *)sock;
 
 @end
+
+/*
+ - (dispatch_queue_t)newSocketQueueForConnectionFromAddress:(NSData *)address onSocket:(GCDAsyncSocket *)sock;
+ 作用： 该方法用于在 socket 接受新连接之前指定新接受的 socket 的队列。通常，你可以通过该方法返回一个新的 dispatch 队列，用于处理新连接的数据。
+ 
+ - (void)socket:(GCDAsyncSocket *)sock didAcceptNewSocket:(GCDAsyncSocket *)newSocket;
+ 作用： 在 socket 接受新连接时调用。另一个 socket 会被自动创建来处理这个连接。你需要保留新的 socket，以便处理连接。默认情况下，新的 socket 将具有相同的委托（delegate）和委托队列（delegateQueue）。你可以随时更改这些设置。
+ 
+ - (void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port;
+ 作用： 当 socket 连接并准备好进行读写时调用。host 参数是一个 IP 地址，而不是 DNS 名称。
+ 
+ - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag;
+ 作用： 当 socket 完成将请求的数据读入内存时调用。如果出现错误，则不会调用此方法。
+ - (void)socket:(GCDAsyncSocket *)sock didReadPartialDataOfLength:(NSUInteger)partialLength tag:(long)tag;
+ 作用： 当 socket 读取数据，但尚未完成读取时调用。这可能发生在使用 readToData: 或 readToLength: 方法时。可以用于更新进度条等任务。
+ - (void)socket:(GCDAsyncSocket *)sock didWriteDataWithTag:(long)tag;
+ 作用： 当 socket 完成写入请求的数据时调用。如果出现错误，则不会调用此方法。
+ - (void)socket:(GCDAsyncSocket *)sock didWritePartialDataOfLength:(NSUInteger)partialLength tag:(long)tag;
+ 作用： 当 socket 写入一些数据，但尚未完成整个写入时调用。可以用于更新进度条等任务。
+ - (NSTimeInterval)socket:(GCDAsyncSocket *)sock shouldTimeoutReadWithTag:(long)tag elapsed:(NSTimeInterval)elapsed bytesDone:(NSUInteger)length;
+ 作用： 当读取操作在未完成的情况下达到其超时时调用。该方法允许你选择性地延长超时。如果返回正数的时间间隔（> 0），则读取的超时将被延长。如果不实现此方法或返回非正数的时间间隔（<= 0），则读取将按照通常的方式超时。
+ - (NSTimeInterval)socket:(GCDAsyncSocket *)sock shouldTimeoutWriteWithTag:(long)tag elapsed:(NSTimeInterval)elapsed bytesDone:(NSUInteger)length;
+ 作用： 当写入操作在未完成的情况下达到其超时时调用。该方法允许你选择性地延长超时。如果返回正数的时间间隔（> 0），则写入的超时将被延长。如果不实现此方法或返回非正数的时间间隔（<= 0），则写入将按照通常的方式超时。
+ - (void)socketDidCloseReadStream:(GCDAsyncSocket *)sock;
+ 作用： 在读取流关闭，但写入流仍可写入时有条件地调用。仅当 autoDisconnectOnClosedReadStream 设置为 NO 时才调用。有关 autoDisconnectOnClosedReadStream 方法的更多信息，请参阅相关讨论。
+ - (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err;
+ 作用： 当 socket 断开连接时，无论是否有错误都会调用。如果调用了 disconnect 方法，且 socket 尚未断开连接，则在 disconnect 方法返回之前将调用此代理方法。
+ - (void)socketDidSecure:(GCDAsyncSocket *)sock;
+ 作用： 在 socket 成功完成 SSL/TLS 协商后调用。仅当使用提供的 startTLS 方法时才会调用。如果 SSL/TLS 协商失败（无效的证书等），则 socket 将立即关闭，并将调用 socketDidDisconnect:withError: 代理方法，传递特定的 SSL 错误代码。
+ */

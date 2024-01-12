@@ -39,6 +39,7 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 		HTTPLogTrace();
 		
 		// Setup underlying dispatch queues
+        // 创建出来的, 都是一个串行的队列.
 		serverQueue = dispatch_queue_create("HTTPServer", NULL);
 		connectionQueue = dispatch_queue_create("HTTPConnection", NULL);
 		
@@ -126,11 +127,7 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 #pragma mark Server Configuration
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/**
- * The document root is filesystem root for the webserver.
- * Thus requests for /index.html will be referencing the index.html file within the document root directory.
- * All file requests are relative to this document root.
-**/
+// 经典的写法, 使用 sync 进行取值, 然后进行返回
 - (NSString *)documentRoot
 {
 	__block NSString *result;
@@ -158,18 +155,15 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 	
 	NSString *valueCopy = [value copy];
 	
+    // 所有的赋值操作, 都是在 serverQueue 的内部执行的.
 	dispatch_async(serverQueue, ^{
 		documentRoot = valueCopy;
 	});
 	
 }
 
-/**
- * The connection class is the class that will be used to handle connections.
- * That is, when a new connection is created, an instance of this class will be intialized.
- * The default connection class is HTTPConnection.
- * If you use a different connection class, it is assumed that the class extends HTTPConnection
-**/
+// 从这里来看, 真正的进行网络通信的部件, 其实是 connectionClass 类.
+// 这个类, 会在 socket 链接成功之后进行创建.
 - (Class)connectionClass
 {
 	__block Class result;
@@ -544,6 +538,10 @@ static const int httpLogLevel = HTTP_LOG_LEVEL_INFO; // | HTTP_LOG_FLAG_TRACE;
 	return [[HTTPConfig alloc] initWithServer:self documentRoot:documentRoot queue:connectionQueue];
 }
 
+/*
+ 当使用 GCDAsyncSocket 用作服务器的时候, 监听的 Socket 和真正的进行通信的 Socket 并不是一个 Socket.
+ 将业务进行切分, 真正的业务处理, 是使用 HTTPConnection 这个类.
+ */
 - (void)socket:(GCDAsyncSocket *)sock didAcceptNewSocket:(GCDAsyncSocket *)newSocket
 {
 	HTTPConnection *newConnection = (HTTPConnection *)[[connectionClass alloc] initWithAsyncSocket:newSocket

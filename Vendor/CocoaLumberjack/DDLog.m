@@ -9,7 +9,7 @@
 
 /**
  * Welcome to Cocoa Lumberjack!
- * 
+ *Lumberjack 是一个日志库的意思. 
  * The project page has a wealth of documentation if you have any questions.
  * https://github.com/robbiehanson/CocoaLumberjack
  * 

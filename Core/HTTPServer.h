@@ -17,7 +17,9 @@
   #endif
 #endif
 
-
+/*
+  这是非常原始的方式. 使用这种方式, 可以在 .m 文件里面, 直接使用以下声明的各个属性, 来进行访问. 
+ */
 @interface HTTPServer : NSObject IMPLEMENTED_PROTOCOLS
 {
 	// Underlying asynchronous TCP/IP socket
@@ -26,6 +28,7 @@
 	// Dispatch queues
 	dispatch_queue_t serverQueue;
 	dispatch_queue_t connectionQueue;
+    
 	void *IsOnServerQueueKey;
 	void *IsOnConnectionQueueKey;
 	

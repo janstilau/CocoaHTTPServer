@@ -15,6 +15,7 @@
 
 @interface HTTPConfig : NSObject
 {
+    //引用到 HTTPServer, 引用计数不加
 	HTTPServer __unsafe_unretained *server;
 	NSString __strong *documentRoot;
 	dispatch_queue_t queue;
